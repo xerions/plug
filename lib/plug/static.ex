@@ -106,7 +106,8 @@ defmodule Plug.Static do
         {_, _} -> from
         _ when is_atom(from) -> {from, "priv/static"}
         _ when is_binary(from) -> from
-        _ -> raise ArgumentError, ":from must be an atom, a binary or a tuple"
+        _ when is_function(from) -> from
+        _ -> raise ArgumentError, ":from must be an atom, a binary or a tuple or a function"
       end
 
     {Plug.Router.Utils.split(at), from, gzip, qs_cache, et_cache, only, headers}
@@ -117,7 +118,10 @@ defmodule Plug.Static do
     # subset/2 returns the segments in `conn.path_info` without the
     # segments at the beginning that are shared with `at`.
     segments = subset(at, conn.path_info) |> Enum.map(&URI.decode/1)
-
+    from = case is_function(from) do
+      true -> from.()
+      false -> from
+    end
     cond do
       not allowed?(only, segments) ->
         conn
